@@ -1,0 +1,7 @@
+Example used for this configuration:
+https://decovar.dev/blog/2021/03/08/cmake-cpp-library/
+
+CREATION OF A INCLUDEABLE SHARED LIBRARY
+https://www.pragmaticlinux.com/2022/02/create-a-shared-library-in-c-with-cmake/
+
+https://decovar.dev/blog/2021/03/08/cmake-cpp-library/
