@@ -8,20 +8,21 @@ namespace arc {
 namespace core {
 
 const char*
-LogID_str(LogID ll) {
-    switch (ll) {
+LogID_str(LogID id) {
+    switch (id) {
     case LOG_INFO:    return "INFO   ";
     case LOG_DEBUG:   return "DEBUG  ";
     case LOG_WARNING: return "WARNING";
     case LOG_ERROR:   return "ERROR  ";
     case LOG_FATAL:   return "FATAL  ";
+    default:
+    return                   "UNKNOWN";
     }
-    return "INVALID LOGLEVEL";
 }
 
 std::shared_ptr<Logger> Logger::make(const std::string &targetfile,
-                                     LogID maxloglevel,
-                                     std::size_t buffersize)
+                                     std::size_t buffersize,
+                                     LogID maxloglevel)
 {
     auto ins = std::make_shared<Logger>();
     ins->m_log_target = targetfile;
@@ -29,7 +30,6 @@ std::shared_ptr<Logger> Logger::make(const std::string &targetfile,
     ins->m_max_level = maxloglevel;
     return ins;
 }
-
 
 void Logger::try_write_to_target(void) {
     if (m_log_target == "")
@@ -39,9 +39,11 @@ void Logger::try_write_to_target(void) {
     if (file.fail())
         return;
     while (m_buffer.size() > 0) {
-        Log popped = m_buffer.front();
+        //Log popped = m_buffer.front();
+        auto [id, msg] = m_buffer.front();
+        file << "[" <<  LogID_str(id) << "] " << msg << std::endl;
         m_buffer.pop_front();
-        file << "[" <<  LogID_str(popped.first) << "] " << popped.second << std::endl;
+        //file << "[" <<  LogID_str(popped.first) << "] " << popped.second << std::endl;
     }
 }
 
@@ -64,29 +66,50 @@ void Logger::buffer_put(Log _log) {
     }
 }
 
-bool Logger::log(LogID _id, const std::string& _msg) {
-    if (_id < m_max_level)
-        return false;
-    for (auto hook : m_log_hooks)
-        hook(_id, _msg);
-    buffer_put({_id, _msg});
-    return true;
-}
-
-bool Logger::timestamped_log(LogID _id, const std::string& _msg) {
-    if (_id < m_max_level)
-        return false;
+std::string Logger::generate_timestamp(void) {
     std::stringstream ss{};
     auto t = time(0);
     tm* now = localtime(&t);
     ss << "(" << 1900 + now->tm_year << "/" << 1 + now->tm_mon << "/"
        << now->tm_mday << " " << 5 + now->tm_hour << ":" << 30 + now->tm_min
-       << ":" << now->tm_sec << ")  " << _msg;
-
-    return log(_id, ss.str());
+       << ":" << now->tm_sec << ")";
+    return ss.str();
 }
 
 size_t Logger::buffer_size(void) { return m_buffer.size(); }
 
-}; /*ns*/
-}; /*ns*/
+bool Logger::log(LogID _id, const std::string& _msg, bool timestamp) {
+    std::string msg{};
+    if (_id < m_max_level)
+        return false;
+    if (timestamp)
+        msg += generate_timestamp() + "  ";
+    msg += _msg;
+    for (auto hook : m_log_hooks)
+        hook(_id, msg);
+    buffer_put({_id, msg});
+    return true;
+}
+
+bool Logger::info(const std::string& _msg, bool timestamp) {
+    return log(LOG_INFO, _msg, timestamp);
+}
+
+bool Logger::debug(const std::string& _msg, bool timestamp) {
+    return log(LOG_DEBUG, _msg, timestamp);
+}
+
+bool Logger::warn(const std::string& _msg, bool timestamp) {
+    return log(LOG_WARNING, _msg, timestamp);
+}
+
+bool Logger::error(const std::string& _msg, bool timestamp) {
+    return log(LOG_ERROR, _msg, timestamp);
+}
+
+bool Logger::fatal(const std::string& _msg, bool timestamp) {
+    return log(LOG_FATAL, _msg, timestamp);
+}
+
+} /*ns*/
+} /*ns*/

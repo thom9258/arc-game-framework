@@ -20,10 +20,12 @@ class IScene {
 };
 
 class SceneHandle {
+public:
     template <typename Scene, class... Args>
     void make(Args&&... _args) {
         m_scene = std::make_shared<Scene>((_args)...);
     }
+    IScene* scene();
     bool async_init();
     bool async_destroy();
     bool can_update();
